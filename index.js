@@ -3,17 +3,20 @@ const cors = require('cors');
 const app = express();
 require('dotenv').config();
 
-// Utiliser CORS et JSON
-app.use(cors());
+// Config CORS temporairement ouvert pour Wix
+app.use(cors({
+  origin: "*", // ⚠️ à restreindre plus tard pour sécurité
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type"]
+}));
+
 app.use(express.json());
 
-// Clé OpenAI depuis .env
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// POST - Route pour Chloé
+// Requête POST vers /ask-chloe
 app.post('/ask-chloe', async (req, res) => {
   const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-
   const userMessage = req.body.message;
 
   const prompt = `
@@ -49,20 +52,20 @@ Message de l’utilisateur : "${userMessage}"
     }
 
     const chloeReply = json.choices[0].message.content;
+    console.log("Réponse générée par Chloé :", chloeReply);
     res.json({ response: chloeReply });
 
   } catch (err) {
     console.error("Erreur côté serveur :", err);
-    res.status(500).json({ response: "Oups, je ne peux pas répondre pour l’instant. Réessaie un peu plus tard. 😥" });
+    res.status(500).json({ response: "Oups, je ne peux pas répondre pour l’instant. Réessaie plus tard. 😥" });
   }
 });
 
-// GET - Pour tester que ça marche
+// Test simple en GET
 app.get("/", (req, res) => {
   res.send("API Chloé fonctionne ✨");
 });
 
-// Lancer le serveur
 const listener = app.listen(process.env.PORT || 3000, () => {
-  console.log("Chloé écoute sur le port " + listener.address().port);
+  console.log("✅ Chloé écoute sur le port " + listener.address().port);
 });
