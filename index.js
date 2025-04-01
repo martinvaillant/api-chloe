@@ -1,15 +1,19 @@
 const express = require('express');
-const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const cors = require('cors');
+const app = express();
 require('dotenv').config();
 
-const app = express();
+// Utiliser CORS et JSON
 app.use(cors());
 app.use(express.json());
 
+// Clé OpenAI depuis .env
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-app.post('/', async (req, res) => {
+// POST - Route pour Chloé
+app.post('/ask-chloe', async (req, res) => {
+  const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
   const userMessage = req.body.message;
 
   const prompt = `
@@ -20,7 +24,7 @@ Si la personne semble en détresse, tu proposes de l’aide de façon humaine, s
 Sois simple, réconfortante, et fais sentir à la personne qu’elle n’est pas seule.
 
 Message de l’utilisateur : "${userMessage}"
-`;
+  `;
 
   try {
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -39,18 +43,26 @@ Message de l’utilisateur : "${userMessage}"
     });
 
     const json = await openaiRes.json();
+
+    if (!json.choices || !json.choices[0]) {
+      throw new Error("Réponse invalide de l'API OpenAI");
+    }
+
     const chloeReply = json.choices[0].message.content;
     res.json({ response: chloeReply });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erreur de communication avec Chloé." });
+    console.error("Erreur côté serveur :", err);
+    res.status(500).json({ response: "Oups, je ne peux pas répondre pour l’instant. Réessaie un peu plus tard. 😥" });
   }
 });
 
+// GET - Pour tester que ça marche
 app.get("/", (req, res) => {
   res.send("API Chloé fonctionne ✨");
 });
 
+// Lancer le serveur
 const listener = app.listen(process.env.PORT || 3000, () => {
   console.log("Chloé écoute sur le port " + listener.address().port);
 });
